@@ -1,0 +1,7 @@
+[package]
+name = "read-poc"
+version = "0.1.0"
+authors = ["Marc Mettke <marc@itmettke.de>"]
+edition = "2018"
+
+[dependencies]
