@@ -1,5 +1,5 @@
 [package]
-name = "read-poc"
+name = "rw-poc"
 version = "0.1.0"
 authors = ["Marc Mettke <marc@itmettke.de>"]
 edition = "2018"

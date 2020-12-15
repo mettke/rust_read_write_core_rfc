@@ -1,5 +1,4 @@
-use crate::rust::lib::Read;
-use std::io::Error;
+use crate::lib::read::{Error, Read};
 
 pub struct TypeImplementingRead {
     data: &'static [u8],
@@ -9,7 +8,7 @@ pub struct TypeImplementingRead {
 impl Default for TypeImplementingRead {
     fn default() -> Self {
         Self {
-            data: &[0, 1, 2],
+            data: &[65, 66, 67],
             i: 0,
         }
     }
