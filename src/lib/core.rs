@@ -13,6 +13,9 @@ pub struct InvalidUtf8;
 #[derive(Copy, Clone, Debug)]
 pub struct OutOfBounds;
 
+#[derive(Copy, Clone, Debug)]
+pub struct FormatterError;
+
 /// Response of a Read or Write Operation
 pub enum OpRes {
     /// Operation did not complete and should be retried.
@@ -78,6 +81,73 @@ pub trait ReadCore {
         Self: Sized,
     {
         Take { inner: self, limit }
+    }
+}
+
+pub trait WriteCore {
+    type Err: From<UnexpectedEndOfFile> + From<FormatterError>;
+
+    fn write(&mut self, buf: &[u8]) -> Result<OpRes, Self::Err>;
+
+    fn flush(&mut self) -> Result<(), Self::Err>;
+
+    fn write_all(&mut self, mut buf: &[u8]) -> Result<(), Self::Err> {
+        while !buf.is_empty() {
+            match self.write(buf)? {
+                OpRes::Eof => return Err(Self::Err::from(UnexpectedEndOfFile)),
+                OpRes::Retry => {}
+                OpRes::Partial(n) => buf = &buf[n.get()..],
+                OpRes::Completly(_) => break,
+            }
+        }
+        Ok(())
+    }
+
+    fn write_fmt(&mut self, fmt: fmt::Arguments) -> Result<(), Self::Err> {
+        struct Adaptor<'a, T: ?Sized + 'a, E: From<UnexpectedEndOfFile> + From<FormatterError>> {
+            inner: &'a mut T,
+            error: Result<(), E>,
+        }
+
+        impl<
+                'a,
+                T: self::WriteCore<Err = E> + ?Sized,
+                E: From<UnexpectedEndOfFile> + From<FormatterError>,
+            > fmt::Write for Adaptor<'a, T, E>
+        {
+            fn write_str(&mut self, s: &str) -> fmt::Result {
+                match self.inner.write_all(s.as_bytes()) {
+                    Ok(()) => Ok(()),
+                    Err(e) => {
+                        self.error = Err(e);
+                        Err(fmt::Error)
+                    }
+                }
+            }
+        }
+
+        let mut output = Adaptor {
+            inner: self,
+            error: Ok(()),
+        };
+        let _ = fmt::write(&mut output, fmt);
+        match fmt::write(&mut output, fmt) {
+            Ok(()) => Ok(()),
+            Err(..) => {
+                if output.error.is_err() {
+                    output.error
+                } else {
+                    Err(Self::Err::from(FormatterError))
+                }
+            }
+        }
+    }
+
+    fn by_ref(&mut self) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self
     }
 }
 

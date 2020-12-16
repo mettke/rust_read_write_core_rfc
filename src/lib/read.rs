@@ -1,4 +1,6 @@
-use super::core::{Bytes, Chain, Initializer, InvalidUtf8, Take, UnexpectedEndOfFile};
+use super::core::{
+    Bytes, Chain, FormatterError, Initializer, InvalidUtf8, Take, UnexpectedEndOfFile,
+};
 use std::error;
 use std::fmt;
 use std::io::{ErrorKind, IoSliceMut};
@@ -103,6 +105,12 @@ impl From<UnexpectedEndOfFile> for Error {
 impl From<InvalidUtf8> for Error {
     fn from(_err: InvalidUtf8) -> Self {
         Error::new(ErrorKind::InvalidData, "Data is invalid UTF-8")
+    }
+}
+
+impl From<FormatterError> for Error {
+    fn from(_err: FormatterError) -> Self {
+        Error::new(ErrorKind::Other, "formatter error")
     }
 }
 
